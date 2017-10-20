@@ -1,0 +1,92 @@
+inc/memlayout.h <- virtual address space, PageInfo
+kern/pmap.c
+kern/pmap.h <- manipulate PageInfo
+kern/kclock.h
+kern/kclock.c
+
+
+少なくとも１つの Challenge problem をやること。
+
+# Exercise 1.
+In the file kern/pmap.c, you must implement code for the following functions (probably in the order given).
+
+boot_alloc()
+mem_init() (only up to the call to check_page_free_list(1))
+page_init()
+page_alloc()
+page_free()
+
+check_page_free_list() and check_page_alloc() test your physical page allocator. You should boot JOS and see whether check_page_alloc() reports success. Fix your code so that it passes. You may find it helpful to add your own assert()s to verify that your assumptions are correct.
+
+PageInfo <- 4KB の page を管理
+
+end は、.bss section の最後を指している。つまり、KERNEL のために確保している 4MB のうち、kernel 自体ではない、それより後ろの部分を、page info を
+収めるのに使っている。
+end は、VMA (virtual memory address) を指す。
+
+ROUNDUP(a, n): a を一番近い n の倍数に round up した結果を返す
+
+pde_t: page directory entry を指す pointer
+
+inc/mmu.h:
+/*
+ *
+ * Part 1.  Paging data structures and constants.
+ *
+ */
+
+// A linear address 'la' has a three-part structure as follows:
+//
+// +--------10------+-------10-------+---------12----------+
+// | Page Directory |   Page Table   | Offset within Page  |
+// |      Index     |      Index     |                     |
+// +----------------+----------------+---------------------+
+//  \--- PDX(la) --/ \--- PTX(la) --/ \---- PGOFF(la) ----/
+//  \---------- PGNUM(la) ----------/
+//
+// The PDX, PTX, PGOFF, and PGNUM macros decompose linear addresses as shown.
+// To construct a linear address la from PDX(la), PTX(la), and PGOFF(la),
+// use PGADDR(PDX(la), PTX(la), PGOFF(la)).
+
+UVPT: User read-only virtual page table
+
+* ULIM, MMIOBASE -->  +------------------------------+ 0xef800000
+*                     |  Cur. Page Table (User R-)   | R-/R-  PTSIZE
+*    UVPT      ---->  +------------------------------+ 0xef400000
+
+NPTENTRIES: 1024  - ページテーブル
+PTSIZE: PGSIZE * NPTENTRIES
+
+PADDR - kernel の virtual address を physical address に変換する (KERNBASE を引く)
+
+kern_pgdir は 1 つのページディレクトリを表している。これは、1024 個の uint32_t* によって表され、全体のサイズは、4096 = PGSIZE である。（ひとつのページに収まる)
+
+https://pdos.csail.mit.edu/6.828/2017/xv6/book-rev10.pdf の Fig 2-1 に page table の構造が書いてある。
+
+pages - Physical page state array
+page_free_list - pages の中で、free なもののリスト
+
+In this lab, you will write the memory management code for your operating system. Memory management has two components.
+
+1. Physical memory allocator
+カーネルがメモリをallocate したり free するためのもの。4K bytes のユニット(pages)を操作する (実際のメモリ領域のうちで、実際に使われているもの、使われていないもの)
+どの physical address が free, allocated なのかと、各 page をいくつのプロセスが使っているかという情報を管理する。
+また、実際に physical page を allocate したり、free するコードも書く必要がある。
+
+The second component of memory management is virtual memory, which maps the virtual addresses used by kernel and user software to addresses in physical memory. The x86 hardware's memory management unit (MMU) performs the mapping when instructions use memory, consulting a set of page tables. You will modify JOS to set up the MMU's page tables according to a specification we provide.
+
+// At IOPHYSMEM (640K) there is a 384K hole for I/O.  From the kernel,
+// IOPHYSMEM can be addressed at KERNBASE + IOPHYSMEM.  The hole ends
+// at physical address EXTPHYSMEM.
+#define IOPHYSMEM 0x0A0000
+#define EXTPHYSMEM  0x100000
+
+https://pdos.csail.mit.edu/6.828/2017/labs/lab1/ に書いてある、VGA Display から、BIOS ROM にわたる領域。これらには、Virtual memory をわりあてることはできない。
+
+また、Kernel は、0x100000 以降に、4MB にわたって読み込まれるので、ここも保護しないといけない。
+
+page2pa : page を physical address に
+page2kva : page を kernel virtual address に
+
+# Ex2.1.
+できた。
