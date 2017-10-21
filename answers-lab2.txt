@@ -48,6 +48,9 @@ inc/mmu.h:
 // To construct a linear address la from PDX(la), PTX(la), and PGOFF(la),
 // use PGADDR(PDX(la), PTX(la), PGOFF(la)).
 
+PDX: Page directory index.
+
+
 UVPT: User read-only virtual page table
 
 * ULIM, MMIOBASE -->  +------------------------------+ 0xef800000
@@ -98,7 +101,7 @@ https://pdos.csail.mit.edu/6.828/2017/readings/i386/s05_02.htm を読んでま�
 Linear Address を, Physical Address に変換する仕組み：
 Linear Address は、10 bit の DIR, 10 bit の PAGE, 12 bit の OFFSET によりなる。
 CR3 register は、page directory の physical address を指し、page directory は、2^10 個の 32bit int (=4byte) からなる。
-CR3[DIR] が、次に見るべき page table を指し、pagetable[PAGE] の下位 12 bit を OFFSET で置き換えたものが実際の Physical address を指す。
+CR3[DIR] (の下位 12 bit を 0 で埋めたもの) が、次に見るべき page table を指し、pagetable[PAGE] の下位 12 bit を OFFSET で置き換えたものが実際の Physical address を指す。
 CR3 は、PDBR (page directory base register) とも呼ばれる。
 
 page directory も、page directory も、同じフォーマットの 4byte int を持つ。(Figure 5-10).
@@ -136,3 +139,15 @@ https://pdos.csail.mit.edu/6.828/2017/readings/i386/s06_03.htm
 
 Data segment descriptor に関しては、writable bit を true にし、
 Code segment descriptor に関しては、readable bit と executable bit を true にしている。また、ともに p flag も立てている。
+
+# Ex 2.4
+mem_init で、kern_pgdir をセットアップしたあと、
+// If the machine reboots at this point, you've probably set up your  
+// kern_pgdir wrong.                                                  
+lcr3(PADDR(kern_pgdir));           // cr3 が kern_pgdir の physical address を指すようにする
+
+// Permissions: kernel R, user R                           
+kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;   // kern_pgdir を ユーザからも UVPT (user (read only) virtual page table) から見れるようにする
+としている。
+
+pte が存在するかどうかは、最下位ビット P を見ればわかる。
