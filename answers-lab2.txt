@@ -90,3 +90,49 @@ page2kva : page を kernel virtual address に
 
 # Ex2.1.
 できた。
+
+# Ex2.2
+Page Translation について、
+https://pdos.csail.mit.edu/6.828/2017/readings/i386/s05_02.htm を読んでまとめ：
+
+Linear Address を, Physical Address に変換する仕組み：
+Linear Address は、10 bit の DIR, 10 bit の PAGE, 12 bit の OFFSET によりなる。
+CR3 register は、page directory の physical address を指し、page directory は、2^10 個の 32bit int (=4byte) からなる。
+CR3[DIR] が、次に見るべき page table を指し、pagetable[PAGE] の下位 12 bit を OFFSET で置き換えたものが実際の Physical address を指す。
+CR3 は、PDBR (page directory base register) とも呼ばれる。
+
+page directory も、page directory も、同じフォーマットの 4byte int を持つ。(Figure 5-10).
+page は、4K offset に align されていると仮定しているので、下位 12bit は省略でき、そこをフラグとして利用している
+
+Segment registers:
+http://flint.cs.yale.edu/cs422/doc/pc-arch.html#register
+CS: Code segment register
+SS: Stack segment register
+DS, ES, FS, GS: data segment registers
+
+segment とは？ http://flint.cs.yale.edu/cs422/doc/pc-arch.html#IA32 を参照。
+memory addressing mode のうちで、flat memory model か segmented memory model かを、processor に指定できる。そのうち, Segment memory model で指定されるメモリの一単位
+flat memory model では、メモリは linear address で指定する。
+segment model では、logical address で指定し、それをプロセッサは、linear address に変換し、さらに physial address に変換する。
+
+JOS では、paging hardware を使い、segment model は使わないが、
+segment-based protection cannot be disabled on the x86, so you will need a basic understanding of it.
+
+flat model では、application にとって、4GB のメモリ空間があるようにみえる。
+segment model では更に大きく、2^46 のメモリがあるようにみえる。(2^14 - 1) このセグメントが存在し、それぞれが、2^32 のメモリ空間 (linear address space) に対応付けられるため (segmented address space)。この lienar address space のことを segment と呼ぶ。
+アプリケーションは、segment selector (16bits), offset (32bit) により、論理アドレスを指定する。
+
+どちらの model であれ、application から見た仮想アドレスと物理アドレスの間の対応は、Kernel が管理しなければらない。
+
+
+Explicit に flat model を指定することはできないが、segment register が、2^32 の lineawr address space を指すようにし、その後
+segment register を一切変更しないことによって、同じ効果を得られる。
+
+boot.S は, code segment (executable segment) 以外のすべての segment register (ds, es, fs, gs, ss) を、0x10 にセットし、
+code segment の segment register を 0x8 にしている。また、lgdt 命令で、gdt をセットしていて、gdt[0x8], gdt[0x10] がそれぞれ、code seg, data seg の segment desciptor を指すようにしている。
+
+各 segment は、type flag によって、executable, readable, writable が決められている。
+https://pdos.csail.mit.edu/6.828/2017/readings/i386/s06_03.htm
+
+Data segment descriptor に関しては、writable bit を true にし、
+Code segment descriptor に関しては、readable bit と executable bit を true にしている。また、ともに p flag も立てている。
