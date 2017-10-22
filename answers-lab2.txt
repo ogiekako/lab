@@ -181,3 +181,9 @@ map するなら、それら全体を map する必要があるはず。UPAGES +
 page2pa と PADDR の違い：
 page2pa(pages) は ページ pages[0] が指している実態としてのページのアドレスを指す。(つまり、0x0)
 PADDR(pages) は、pages 自体がどこのアドレスに存在するかを指す。
+
+page を mapping するということと、その page が実際に page_alloc で確保されているかどうかは別問題。boot_map_region, page_insert は physical page の確保はしない。
+
+# Questions
+2. 埋まっている PDE はどれか？
+KERNBASE より上の256MB = (64 * 4MB) は埋まっている。1023 - 960 は埋まっている。
