@@ -151,3 +151,33 @@ kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;   // kern_pgdir を 
 としている。
 
 pte が存在するかどうかは、最下位ビット P を見ればわかる。
+
+# Part 3
+PTSIZE - PGSIZE * NPTENTRIES (1024) = 4MB
+ULIM - 0xef800000
+より上の約 256MB 部分を Kernel が使い、管理するメモリとし、それ以下の部分を user processes 用としている。
+
+ULIM より上は、Kernel が読み書きできるけど、User はアクセスできない
+[UTOP, ULIM) は、Kernel, User ともに Read しかできない - Read only で Kernel データを見せる
+UTOP 未満は、User process が適当に permission を設定する。
+
+# Ex 3.5
+>-// Permissions: kernel R, user R                          
+>-kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
+これは、la = PDX(UVPT), ptx, offset でアクセスすると、kern_pgdir[ptx], offset が取れるようにしている。
+PDE, PTE の構造が同じであるから、kern_pgdir は本来は、pde のリストだけど、それを pte のリストとして捉えても矛盾を生じないことから、こういうことができる。
+  pgdir_walk()
+  boot_map_region()
+  page_lookup()
+  page_remove()
+  page_insert(*pp, *va, perm) - pp を linear address va に挿入する (va により指定される PTE が物理アドレス pp を指すようにする) va が
+  それをさすようにするという話なので、PDE は必要なら自動的に挿入される。
+*pages は、カーネルが page を管理するための構造体の配列。ある *page はそのアドレスから、physical address に対応付けられる。
+
+Map 'pages' read-only by the user at linear address UPAGES
+pages そのものは、PageInfo* の配列に過ぎないので、それ一つだけを map しても意味が無いはず。
+map するなら、それら全体を map する必要があるはず。UPAGES + i が &pages[i] を指すようにするといいのだろうか？それは、boot_map_region を使うと一気にできる。boot_map_region は、実際の page の有無は気にせず、PDE, PTE をその virtual address が与えられた physical address を指すようにセットアップする。(PDE は必要ならば作成する)
+
+page2pa と PADDR の違い：
+page2pa(pages) は ページ pages[0] が指している実態としてのページのアドレスを指す。(つまり、0x0)
+PADDR(pages) は、pages 自体がどこのアドレスに存在するかを指す。
