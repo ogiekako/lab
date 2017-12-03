@@ -2,14 +2,14 @@
 #define JOS_INC_MMU_H
 
 /*
- * This file contains definitions for the x86 memory management unit (MMU),
- * including paging- and segmentation-related data structures and constants,
- * the %cr0, %cr4, and %eflags registers, and traps.
+ * このファイルは、ページングやセグメンテーション関連のデータ構造や定数、
+ * %cr0, %cr4, %eflags レジスタ、トラップ を含む、
+ * x86 メモリ管理ユニット(MMU) のための定義を行う。
  */
 
 /*
  *
- *	Part 1.  Paging data structures and constants.
+ *	Part 1.  ページングデータ構造と定数
  *
  */
 
